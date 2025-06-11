@@ -318,8 +318,20 @@ def add_tensors_with_padding(tensor1, tensor2):
 
 
 def print_free_mem():
-    torch.cuda.empty_cache()
-    free_mem, total_mem = torch.cuda.mem_get_info(0)
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+        free_mem, total_mem = torch.cuda.mem_get_info(0)
+    elif torch.xpu.is_available():
+        # Assumes no other process is using the device
+        torch.xpu.empty_cache()
+        total_mem = torch.xpu.get_device_properties(device).total_memory
+        memory_stats = torch.xpu.memory_stats(device)
+        bytes_active = memory_stats['active_bytes.all.current']
+        free_mem = total_mem - bytes_active
+        # free_mem, total_mem = torch.xpu.mem_get_info(0)  # not supported yet
+    else:
+        print("No GPU available.")
+        return
     free_mem_mb = free_mem / (1024 ** 2)
     total_mem_mb = total_mem / (1024 ** 2)
     print(f"Free memory: {free_mem_mb:.2f} MB")
